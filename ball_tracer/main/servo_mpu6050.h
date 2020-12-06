@@ -12,7 +12,7 @@
 //You can get these value from the datasheet of servo you use, in general pulse width varies between 1000 to 2000 mocrosecond
 #define SERVO_MIN_PULSEWIDTH 1000 //Minimum pulse width in microsecond
 #define SERVO_MAX_PULSEWIDTH 2000 //Maximum pulse width in microsecond
-#define SERVO_MAX_DEGREE 90 //Maximum angle in degree upto which servo can rotate
+#define SERVO_MAX_DEGREE 240 //Maximum angle in degree upto which servo can rotate
 
 #define IMU_MSG_LENGTH              11u
 #define IMU_MSG_LENGTH_2            (IMU_MSG_LENGTH * 2.f)
@@ -181,17 +181,31 @@ float map(float value,float min,float max,float map_min,float map_max){
 static void mcpwm_example_servo_control(void *arg)
 {
     uint32_t angle[3], count[3];
+    count[0]=0;
+    int dir=0;
     while (1) {
-        count[0] = (uint32_t)map(imu.mag.x, -90, 90, 0, 90);
-        count[1] = (uint32_t)map(imu.mag.y, -90, 90, 0, 90);
-        count[2] = (uint32_t)map(imu.mag.z, -90, 90, 0, 90);
+        // count[0] = (uint32_t)map(imu.mag.x, -90, 90, 0, 90);
+        // count[1] = (uint32_t)map(imu.mag.y, -90, 90, 0, 90);
+        // count[2] = (uint32_t)map(imu.mag.z, -90, 90, 0, 90);
+    if(dir==0){
+        count[0]++;
+        if(count[0]>=SERVO_MAX_DEGREE){
+            dir=1;
+        }
+    }
+    else{
+        count[0]--;
+        if(count[0]<=0){
+            dir=0;
+        }
+    }
         for (int i = 0; i < 3;i++){
             angle[i]=servo_per_degree_init(count[i]);
         }
         mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, angle[0]);
-        mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, angle[1]);
-        mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, angle[2]);
-        vTaskDelay(50 / portTICK_PERIOD_MS);
+        //mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, angle[1]);
+        //mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_1, MCPWM_OPR_A, angle[2]);
+        vTaskDelay(20 / portTICK_PERIOD_MS);
     }
 }
 #endif
