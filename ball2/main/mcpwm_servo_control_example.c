@@ -55,7 +55,7 @@ static uint32_t servo_per_degree_init(float degree_of_rotation)
 #define ECHO_TEST_CTS (UART_PIN_NO_CHANGE)
 
 #define BUF_SIZE (1024)
-
+uint8_t data[BUF_SIZE];
 static void echo_task(void *arg)
 {
     /* Configure parameters of an UART driver,
@@ -73,7 +73,7 @@ static void echo_task(void *arg)
     uart_set_pin(UART_NUM_1, ECHO_TEST_TXD, ECHO_TEST_RXD, ECHO_TEST_RTS, ECHO_TEST_CTS);
 
     // Configure a temporary buffer for the incoming data
-    uint8_t *data = (uint8_t *)malloc(BUF_SIZE);
+    //uint8_t *data = (uint8_t *)malloc(BUF_SIZE);
 
     while (1)
     {
@@ -81,40 +81,27 @@ static void echo_task(void *arg)
         memset(data,0,BUF_SIZE*sizeof(uint8_t));
         int len = uart_read_bytes(UART_NUM_1, data, BUF_SIZE, 20 / portTICK_RATE_MS);
         // Process the data
-        uint8_t *p = data;
-        if(len>0){
+        //uint8_t *p = data;
+        if(len>=13){
             printf("ok \n");
             for(int i=0;i<len;i++){
                 printf("%d: %c %d \n",i,data[i],data[i]);
             }
-        }
-        if(p[0] == 'A' && p[6] == 'B' && p[12]=='D'){
-            printf("ok \n");
-            while (*p != 'B')
-            {
-                if (*p == 'A')
-                    continue;
-                angle_pitch *= 10;
-                angle_pitch += *p - '0';
-                
-                ++p;
-            }
-            while (*p != 'D')
-            {
-                if (*p == 'B')
-                    continue;
-                angle_yaw *= 10;
-                angle_yaw += *p - '0';
-                ++p;
-            }
+            if(data[0] == 'A' && data[6] == 'B' && data[12]=='D'){
+                printf("ok \n");
+                angle_pitch=(data[1]-'0')*10000+(data[2]-'0')*1000+(data[3]-'0')*100+(data[4]-'0')*10+(data[5]-'0');
+                angle_yaw=(data[7]-'0')*10000+(data[8]-'0')*1000+(data[9]-'0')*100+(data[10]-'0')*10+(data[11]-'0');
                 angle_pitch /= 100.0;
                 angle_yaw /= 100.0;
-            printf("angle_pitch %f\n",angle_pitch);
-            printf("angle_yaw %f \n",angle_yaw);
+                printf("angle_pitch %f\n",angle_pitch);
+                printf("angle_yaw %f \n",angle_yaw);
 
+            }
         }
         // Write data back to the UART
-        uart_write_bytes(UART_NUM_1, (const char *)data, len);
+        if(len>0){
+            uart_write_bytes(UART_NUM_1, (const char *)data, len);
+        }
         //vTaskDelay(1);
     }
 }
@@ -140,6 +127,7 @@ void mcpwm_example_servo_control(void *arg)
     //int dir = 0;
     //angle = 45;
     uint32_t pluse_width;
+    int div=0;
     while (1)
     {
         // if (dir == 0)
@@ -170,7 +158,11 @@ void mcpwm_example_servo_control(void *arg)
         // }
         pluse_width = servo_per_degree_init(angle_yaw);
         mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, pluse_width);
-        //printf("set pitch %dS\n",pluse_width);
+        if(div>=500){
+            printf("set yaw %d \n",pluse_width);
+            div=0;
+        }
+        div++;
         // pluse_width = servo_per_degree_init(angle_pitch);
         // mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, pluse_width);
         vTaskDelay(1);
@@ -181,6 +173,6 @@ void app_main(void)
 {
     printf("Testing servo motor.......\n");
     // uart
-    xTaskCreate(echo_task, "uart_echo_task", 1024, NULL, 10, NULL);
+    xTaskCreate(echo_task, "uart_echo_task", 2048, NULL, 10, NULL);
     xTaskCreate(mcpwm_example_servo_control, "mcpwm_example_servo_control", 4096, NULL, 5, NULL);
 }
