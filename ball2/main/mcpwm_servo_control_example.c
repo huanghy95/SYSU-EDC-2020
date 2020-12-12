@@ -22,7 +22,7 @@
 #define SERVO_MAX_PULSEWIDTH 2400 //Maximum pulse width in microsecond
 #define SERVO_MAX_DEGREE 180      //Maximum angle in degree upto which servo can rotate
 
-float angle_pitch = 0, angle_yaw = 100;
+float angle_pitch = 100, angle_yaw = 100;
 #define GPIO_PWM0A_OUT 14   //Set GPIO 15 as PWM0A
 #define GPIO_PWM0B_OUT 2   //Set GPIO 2 as PWM0B
 
@@ -126,7 +126,7 @@ void mcpwm_example_servo_control(void *arg)
     mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config); //Configure PWM0A & PWM0B with above settings
     //int dir = 0;
     //angle = 45;
-    uint32_t pluse_width;
+    uint32_t yaw_pluse_width,pitch_pluse_width;
     int div=0;
     while (1)
     {
@@ -156,10 +156,13 @@ void mcpwm_example_servo_control(void *arg)
         //         dir = 0;
         //     }
         // }
-        pluse_width = servo_per_degree_init(angle_yaw);
-        mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, pluse_width);
+        yaw_pluse_width = servo_per_degree_init(angle_yaw);
+        mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, yaw_pluse_width);
+        pitch_pluse_width = servo_per_degree_init(angle_pitch);
+        mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, pitch_pluse_width);
         if(div>=500){
-            printf("set yaw %d \n",pluse_width);
+            printf("set yaw %d \n",yaw_pluse_width);
+            printf("set pitch %d \n",pitch_pluse_width);
             div=0;
         }
         div++;
