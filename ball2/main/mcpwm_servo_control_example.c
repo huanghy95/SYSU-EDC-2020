@@ -100,19 +100,19 @@ static void echo_task(void *arg)
         // Process the data
         //uint8_t *p = data;
         if(len>=13){
-            printf("ok \n");
-            for(int i=0;i<len;i++){
-                printf("%d: %c %d \n",i,data[i],data[i]);
-            }
+            // printf("ok \n");
+            // for(int i=0;i<len;i++){
+            //     printf("%d: %c %d \n",i,data[i],data[i]);
+            // }
             if(data[0] == 'A' && data[6] == 'B' && data[12]=='D'){
-                printf("ok \n");
                 angle_pitch=(data[1]-'0')*10000+(data[2]-'0')*1000+(data[3]-'0')*100+(data[4]-'0')*10+(data[5]-'0');
                 angle_yaw=(data[7]-'0')*10000+(data[8]-'0')*1000+(data[9]-'0')*100+(data[10]-'0')*10+(data[11]-'0');
                 angle_pitch /= 100.0;
                 angle_yaw /= 100.0;
                 angle_yaw -= 90;
-                printf("angle_pitch %f\n",angle_pitch);
-                printf("angle_yaw %f \n",angle_yaw);
+                // printf("ok \n");
+                // printf("angle_pitch %f\n",angle_pitch);
+                // printf("angle_yaw %f \n",angle_yaw);
 
             }
         }
@@ -146,6 +146,7 @@ void mcpwm_example_servo_control(void *arg)
     //angle = 45;
     uint32_t yaw_pluse_width,pitch_pluse_width;
     int div=0;
+    int wee=0;
     while (1)
     {
         // if (dir == 0)
@@ -178,9 +179,10 @@ void mcpwm_example_servo_control(void *arg)
         mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, yaw_pluse_width);
         pitch_pluse_width = cal_pitch_plusewidth(angle_pitch);
         mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, pitch_pluse_width);
-        if(div>=500){
-            printf("set yaw %d \n",yaw_pluse_width);
-            printf("set pitch %d \n",pitch_pluse_width);
+        if(div>=20){
+            printf("set yaw %.2f \n",angle_yaw);
+            printf("set pitch %.2f \n",angle_pitch);
+            //printf("count: %d \n",wee++);
             div=0;
         }
         div++;
