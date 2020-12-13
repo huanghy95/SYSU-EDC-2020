@@ -25,7 +25,109 @@
 float angle_pitch = 100, angle_yaw = 100;
 #define GPIO_PWM0A_OUT 14   //Set GPIO 15 as PWM0A
 #define GPIO_PWM0B_OUT 2   //Set GPIO 2 as PWM0B
+//mpu6050
+#define IMU_MSG_LENGTH              11u
+#define IMU_MSG_LENGTH_2            (IMU_MSG_LENGTH * 2.f)
+#define IMU_MSG_LENGTH_3            (IMU_MSG_LENGTH * 3.f)
+#define IMU_MSG_SOF                 0x55
+#define IMU_CMD_ID_SEGMENT_OFFSET   0x01
 
+#define IMU_ACCEL_CMD_ID            0x51
+#define IMU_GYRO_CMD_ID             0x52
+#define IMU_MAG_CMD_ID              0x53
+
+#define ECHO_TEST_TXD  (GPIO_NUM_15)
+#define ECHO_TEST_RXD  (GPIO_NUM_13)
+#define ECHO_TEST_RTS  (UART_PIN_NO_CHANGE)
+#define ECHO_TEST_CTS  (UART_PIN_NO_CHANGE)
+
+#define BUF_SIZE (1024)
+
+static uint16_t _1L = IMU_MSG_LENGTH;
+static uint16_t _2L = IMU_MSG_LENGTH_2;
+
+
+typedef struct {
+    __packed struct {
+    float x;
+    float y;
+    float z;
+    } acc;
+    
+    __packed struct {
+    float x;
+    float y;
+    float z;
+    } gyro;
+    
+    __packed struct {
+    float x;
+    float y;
+    float z;
+    } mag;
+} imu_t;
+
+imu_t imu;
+void imu_task_init(void);
+void imu_download_msg_process(uint8_t * buffer);
+void imu_msg_unpack_handler(uint8_t * buffer);
+
+void mpu6050_init();
+void imu_download_msg_process(uint8_t *buffer);
+void imu_msg_unpack_handler(uint8_t *buffer);
+static void echo_task(void *arg);
+void show_data();
+static uint32_t servo_per_degree_init(uint32_t degree_of_rotation);
+static void mcpwm_example_gpio_initialize(void);
+float map(float value,float min,float max,float map_min,float map_max);
+static void mcpwm_example_servo_control(void *arg);
+
+void mpu6050_init(){
+    char mpu_config[3] = {0xFF, 0xAA, 0x64};//configure mpu to baud 115200
+    uart_write_bytes(UART_NUM_1, (const char *) mpu_config, 3);
+}
+
+void imu_download_msg_process(uint8_t * buffer)
+{
+    // 确认帧头
+    if(buffer[0] == IMU_MSG_SOF)
+    {
+        imu_msg_unpack_handler(buffer);
+    }
+}
+
+/**
+  * @brief     MPU6050 解包函数
+  * @param[in] buffer: 完整的三帧信息
+  * @retval    null
+  */
+void imu_msg_unpack_handler(uint8_t * buffer)
+{
+    if (buffer[IMU_CMD_ID_SEGMENT_OFFSET] == IMU_ACCEL_CMD_ID)
+    {
+        // IMU_ACCEL: // 0.005f ≈ 1.f / 32768.f * 16.f * 9.8f
+        imu.acc.x =  ((short)(buffer[3]<<8 | buffer[2])) * 0.005f;    // g
+        imu.acc.y =  ((short)(buffer[5]<<8 | buffer[4])) * 0.005f;    // g
+        imu.acc.z =  ((short)(buffer[7]<<8 | buffer[6])) * 0.005f;    // g
+    }
+    
+    if (buffer[IMU_CMD_ID_SEGMENT_OFFSET + _1L] == IMU_GYRO_CMD_ID)
+    {
+        // IMU_GYRO:  // 0.061f ≈ 1.f / 32768.f * 2000.f
+        imu.gyro.x = ((short)(buffer[_1L + 3]<<8 | buffer[_1L + 2])) * 0.061f;   // deg/sec
+        imu.gyro.y = ((short)(buffer[_1L + 5]<<8 | buffer[_1L + 4])) * 0.061f;   // deg/sec
+        imu.gyro.z = ((short)(buffer[_1L + 7]<<8 | buffer[_1L + 6])) * 0.061f;   // deg/sec
+    }
+    
+    if (buffer[IMU_CMD_ID_SEGMENT_OFFSET + _2L] == IMU_MAG_CMD_ID)
+    {
+        // IMU_MAG:   // 0.005f ≈ 1.f / 32768.f * 180.f
+        imu.mag.x =  ((short)(buffer[_2L + 3]<<8 | buffer[_2L + 2])) * 0.005f;    // deg
+        imu.mag.y =  ((short)(buffer[_2L + 5]<<8 | buffer[_2L + 4])) * 0.005f;    // deg
+        imu.mag.z =  ((short)(buffer[_2L + 7]<<8 | buffer[_2L + 6])) * 0.005f;    // deg
+    }
+}
+//mpu6050 over
 static void mcpwm_example_gpio_initialize(void)
 {
     printf("initializing mcpwm servo control gpio......\n");
