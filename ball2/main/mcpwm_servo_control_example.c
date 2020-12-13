@@ -48,6 +48,23 @@ static uint32_t servo_per_degree_init(float degree_of_rotation)
     cal_pulsewidth = (SERVO_MIN_PULSEWIDTH + ((1.0*(SERVO_MAX_PULSEWIDTH - SERVO_MIN_PULSEWIDTH) * (degree_of_rotation)) / (SERVO_MAX_DEGREE)));
     return cal_pulsewidth;
 }
+static uint32_t cal_pitch_plusewidth(float angle_pitch) 
+{
+    if(angle_pitch>=90)angle_pitch=90;
+    if(angle_pitch<=10)angle_pitch=10;
+    uint32_t cal_pulsewidth = 0; 
+    cal_pulsewidth = -10.5*(angle_pitch-90)+1622;
+    return cal_pulsewidth;
+}
+static uint32_t cal_yaw_plusewidth(float angle_yaw) 
+{
+    if(angle_yaw>=60)angle_yaw=60;
+    if(angle_yaw<=-60)angle_yaw=-60;
+    uint32_t cal_pulsewidth = 0; 
+    cal_pulsewidth = 10.5*(angle_yaw)+1066;
+    return cal_pulsewidth;
+}
+
 
 #define ECHO_TEST_TXD (GPIO_NUM_13)
 #define ECHO_TEST_RXD (GPIO_NUM_15)
@@ -93,6 +110,7 @@ static void echo_task(void *arg)
                 angle_yaw=(data[7]-'0')*10000+(data[8]-'0')*1000+(data[9]-'0')*100+(data[10]-'0')*10+(data[11]-'0');
                 angle_pitch /= 100.0;
                 angle_yaw /= 100.0;
+                angle_yaw -= 90;
                 printf("angle_pitch %f\n",angle_pitch);
                 printf("angle_yaw %f \n",angle_yaw);
 
@@ -100,7 +118,7 @@ static void echo_task(void *arg)
         }
         // Write data back to the UART
         if(len>0){
-            uart_write_bytes(UART_NUM_1, (const char *)data, len);
+            //uart_write_bytes(UART_NUM_1, (const char *)data, len);
         }
         //vTaskDelay(1);
     }
@@ -156,9 +174,9 @@ void mcpwm_example_servo_control(void *arg)
         //         dir = 0;
         //     }
         // }
-        yaw_pluse_width = servo_per_degree_init(angle_yaw);
+        yaw_pluse_width = cal_yaw_plusewidth(angle_yaw);
         mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_A, yaw_pluse_width);
-        pitch_pluse_width = servo_per_degree_init(angle_pitch);
+        pitch_pluse_width = cal_pitch_plusewidth(angle_pitch);
         mcpwm_set_duty_in_us(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM_OPR_B, pitch_pluse_width);
         if(div>=500){
             printf("set yaw %d \n",yaw_pluse_width);
